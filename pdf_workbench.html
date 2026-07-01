@@ -254,9 +254,9 @@ input,select,textarea{font-family:inherit;}
 .file-item.active{background:var(--accent-soft);border-color:var(--accent-dim);}
 .file-item.drag-over{border-color:var(--accent);}
 .file-item .fi-icon{
-  flex:0 0 auto;width:26px;height:26px;border-radius:4px;
+  flex:0 0 auto;width:34px;height:26px;border-radius:4px;
   background:var(--bg-4);display:flex;align-items:center;justify-content:center;
-  color:var(--accent);font-size:10px;font-weight:700;font-family:var(--font-mono);
+  color:var(--accent);font-size:8.5px;font-weight:700;font-family:var(--font-mono);letter-spacing:0.2px;
 }
 .file-item .fi-meta{flex:1 1 auto;min-width:0;}
 .file-item .fi-name{
@@ -391,6 +391,104 @@ input,select,textarea{font-family:inherit;}
   pointer-events:none;
 }
 
+/* editable / draggable text annotation boxes (live DOM overlay, not baked into canvas until export) */
+.text-annot-box{
+  position:absolute;
+  min-width:18px;
+  min-height:1.3em;
+  padding:2px 5px;
+  margin:-2px -5px; /* keep visual box centered on the click point despite padding */
+  white-space:pre-wrap;
+  word-break:break-word;
+  outline:none;
+  border:1.5px dashed transparent;
+  border-radius:3px;
+  background:transparent;
+  font-family:var(--font-ui);
+  line-height:1.25;
+  cursor:move;
+  -webkit-user-select:text;
+  user-select:text;
+  pointer-events:auto;
+  z-index:6;
+}
+.text-annot-box:hover{ border-color:rgba(79,140,255,0.45); }
+.text-annot-box.selected{ border-color:var(--accent); background:rgba(79,140,255,0.07); }
+.text-annot-box.editing{
+  cursor:text;
+  border-color:var(--accent);
+  background:rgba(255,255,255,0.55);
+  box-shadow:0 0 0 2px var(--accent-soft);
+}
+.text-annot-box.dragging{ opacity:0.85; cursor:grabbing; }
+.text-annot-box:empty::before{ content:"Type here…"; opacity:0.45; }
+.crosshair .text-annot-box{ pointer-events:none; } /* let screenshot drag-select pass through */
+
+/* text box font-size resize handle — a sibling (not a child) of the box, so
+   updating the box's textContent never wipes it out */
+.text-resize-handle{
+  position:absolute;
+  width:12px; height:12px;
+  background:#fff;
+  border:1.5px solid var(--accent);
+  border-radius:2px;
+  cursor:nwse-resize;
+  pointer-events:auto;
+  z-index:8;
+  display:none;
+  transform:translate(-50%,-50%);
+}
+.crosshair .text-resize-handle{ pointer-events:none; display:none; }
+
+/* clickable hit-targets sitting over highlighted search matches */
+.match-hit{
+  position:absolute;
+  cursor:pointer;
+  pointer-events:auto;
+  z-index:4; /* beneath text boxes (6), so a box placed on a "blank" match takes over once created */
+}
+.crosshair .match-hit{ pointer-events:none; }
+
+/* floating shortcuts / help reference panel (non-blocking, sits beside the canvas) */
+#help-panel{
+  position:fixed;
+  top:54px; right:14px;
+  width:330px;
+  max-height:calc(100vh - 76px);
+  background:var(--bg-2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  box-shadow:0 24px 60px rgba(0,0,0,0.5);
+  overflow-y:auto;
+  z-index:90;
+  display:none;
+}
+#help-panel.visible{ display:block; }
+#help-panel .hp-head{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 14px;border-bottom:1px solid var(--line-soft);
+  position:sticky;top:0;background:var(--bg-2);border-radius:10px 10px 0 0;
+}
+#help-panel .hp-head h3{ margin:0;font-size:13px; }
+#help-panel .hp-body{ padding:4px 14px 14px; }
+#help-panel .hp-section{ margin-top:14px; }
+#help-panel .hp-section h4{
+  font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px;
+  color:var(--text-2);margin:0 0 4px;font-weight:700;
+}
+#help-panel .hp-row{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+  padding:6px 0;border-bottom:1px solid var(--line-soft);font-size:11.5px;
+}
+#help-panel .hp-row:last-child{ border-bottom:none; }
+#help-panel .hp-desc{ color:var(--text-1);flex:1;line-height:1.4; }
+#help-panel .hp-desc b{ color:var(--text-0); }
+#help-panel .hp-key{
+  font-family:var(--font-mono);font-size:10px;color:var(--text-2);
+  background:var(--bg-0);border:1px solid var(--line);border-radius:4px;
+  padding:2px 5px;white-space:nowrap;height:fit-content;flex:0 0 auto;
+}
+
 /* floating screenshot toolbar */
 #shot-toolbar{
   position:absolute;
@@ -464,6 +562,7 @@ input,select,textarea{font-family:inherit;}
 .btn.danger:hover{background:var(--danger-soft);}
 .btn:disabled{opacity:0.35;cursor:not-allowed;}
 .btn.small{padding:5px 8px;font-size:10.5px;}
+.toggle-btn.active{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
 .divider{height:1px;background:var(--line-soft);margin:12px 0;}
 .note{font-size:11px;color:var(--text-2);line-height:1.55;margin-bottom:10px;}
 .note code{font-family:var(--font-mono);background:var(--bg-2);padding:1px 4px;border-radius:3px;color:var(--accent);}
@@ -473,10 +572,15 @@ input,select,textarea{font-family:inherit;}
   text-transform:uppercase;letter-spacing:0.4px;
 }
 .badge.warn{background:var(--warn-soft);color:var(--warn);}
-#ocr-output, #search-status{
+#ocr-output{
   width:100%;min-height:120px;background:var(--bg-2);border:1px solid var(--line);
   border-radius:5px;padding:8px;font-family:var(--font-mono);font-size:11.5px;
   color:var(--text-0);white-space:pre-wrap;word-break:break-word;overflow-y:auto;max-height:220px;
+}
+#search-status, .search-status-line{
+  width:100%;min-height:32px;background:var(--bg-2);border:1px solid var(--line);
+  border-radius:5px;padding:7px 8px;font-family:var(--font-mono);font-size:11px;
+  color:var(--text-1);white-space:pre-wrap;word-break:break-word;margin-bottom:4px;
 }
 .range-pages{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;max-height:140px;overflow-y:auto;padding:2px;}
 .pg-chip{
@@ -550,6 +654,11 @@ input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
         Export<span class="tb-kbd">⌃S</span>
       </button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" id="btn-help" title="Functions &amp; shortcuts reference">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7v.3"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>
+        Help
+      </button>
     </div>
     <div id="statusline">
       <span class="dot"></span>
@@ -566,10 +675,10 @@ input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;}
         <div class="panel-section-head"><h3>Documents</h3><span class="badge" id="doc-mode-badge">empty</span></div>
         <div id="drop-zone" tabindex="0">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-          <div class="dz-title">Drop PDF files here</div>
-          <div class="dz-sub">or click to browse · multiple allowed</div>
+          <div class="dz-title">Drop PDF, image, Word, or Excel files here</div>
+          <div class="dz-sub">DOCX/XLSX/PNG/JPG convert to PDF automatically</div>
         </div>
-        <input type="file" id="file-input" accept="application/pdf" multiple style="display:none;">
+        <input type="file" id="file-input" accept="application/pdf,image/png,image/jpeg,.docx,.xlsx" multiple style="display:none;">
         <div class="panel-section-body" id="file-list" style="max-height:180px;"></div>
       </div>
 
@@ -579,9 +688,9 @@ input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;}
       </div>
 
       <div class="panel-section" style="flex:0 0 220px;">
-        <div class="panel-section-head"><h3>Regex matches</h3><span id="match-count" class="badge"></span></div>
+        <div class="panel-section-head"><h3>Search matches</h3><span id="match-count" class="badge"></span></div>
         <div class="panel-section-body" id="match-list">
-          <div class="section-hint">Run a search from the Search tab to find matches such as <code style="font-family:var(--font-mono);color:var(--accent);">123456A</code> across the document.</div>
+          <div class="section-hint">Run a search from the Search tab — patterns, signature fields, or fillable blanks will all show up here.</div>
         </div>
       </div>
     </div>
@@ -713,13 +822,21 @@ input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;}
           <label>Font size <span style="text-transform:none;">(text tool)</span></label>
           <div class="row"><input type="range" id="annot-fontsize" min="8" max="64" value="16"><span class="val" id="annot-fontsize-label">16px</span></div>
         </div>
+        <div class="field">
+          <label>Text style <span style="text-transform:none;">(text tool)</span></label>
+          <div class="row">
+            <button class="btn small toggle-btn" id="annot-bold" title="Bold" style="font-weight:800;width:34px;justify-content:center;">B</button>
+            <button class="btn small toggle-btn" id="annot-italic" title="Italic" style="font-style:italic;width:34px;justify-content:center;">I</button>
+            <span style="font-size:10.5px;color:var(--text-2);">select a text box or shape first to restyle it</span>
+          </div>
+        </div>
         <div class="divider"></div>
         <div class="btn-row">
           <button class="btn" id="btn-undo-2">Undo</button>
           <button class="btn" id="btn-redo-2">Redo</button>
           <button class="btn danger" id="btn-clear-annots">Clear page</button>
         </div>
-        <div class="note">Annotations are drawn on a transparent overlay above the page. The original PDF content is <strong>never</strong> modified until you export.</div>
+        <div class="note">Annotations are drawn on a transparent overlay above the page. The original PDF content is <strong>never</strong> modified until you export. Click directly on any existing shape (with any tool selected) to activate it — shown with a dashed box and small square handles. Drag the <strong>body</strong> to move it, or drag a <strong>handle</strong> to resize/reshape it (lines and arrows resize from either end). Click a text box once to select it without entering edit mode — drag its small corner handle up/down to change its font size, or use the slider below.</div>
       </div>
 
       <!-- PAGES TAB (merge/split/rotate) -->
@@ -785,14 +902,60 @@ input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;}
 
       <!-- SEARCH TAB -->
       <div class="tool-pane" data-pane="search" id="pane-search">
-        <div class="note">Finds patterns of <strong>6 digits followed by 1 letter</strong> (e.g. <code>123456A</code>) inside the PDF text layer. Case-insensitive. Letter is always at the end.</div>
+
+        <div class="field" style="margin-bottom:14px;">
+          <label class="row" style="text-transform:none;font-weight:500;color:var(--text-1);gap:7px;cursor:pointer;">
+            <input type="checkbox" id="search-include-ocr">
+            Also OCR scanned pages (slower)
+          </label>
+          <div class="section-hint" style="padding:4px 0 0;">For pages with little or no real text layer (scanned documents, photographed forms), every search below will additionally OCR that page and search the recognized text too. Pages that already have a normal text layer are never re-OCR'd, but this can still take a while on image-heavy documents.</div>
+        </div>
+
+        <div class="panel-section-head" style="padding:0 0 6px;"><h3>Pattern <span class="badge" style="background:var(--warn-soft);color:var(--warn);">amber</span></h3></div>
+        <div class="note">Finds 7‑character codes: <strong>6 letters/digits (at least one digit) + 1 trailing letter</strong> (e.g. <code>1234b6T</code>) by default, case‑insensitive. Click a highlight on the page to <strong>copy</strong> it.</div>
+        <div class="field">
+          <label>Preset</label>
+          <select id="regex-preset">
+            <option value="">— pick a common pattern —</option>
+            <option value="\b(?=[A-Za-z0-9]{0,5}\d)[A-Za-z0-9]{6}[A-Za-z]\b">Code: 6 alphanumeric (≥1 digit) + 1 letter</option>
+            <option value="\b[A-Z][a-zA-Z'-]+(?:\s+[A-Z]\.)?(?:\s+[A-Z][a-zA-Z'-]+){1,2}\b">English name (heuristic)</option>
+            <option value="\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b">Email address</option>
+            <option value="\b(?:\(\d{3}\)\s?|\d{3}[-.\s]?)\d{3}[-.\s]?\d{4}\b">Phone number (US-style)</option>
+            <option value="\b\d{3}-\d{2}-\d{4}\b">SSN-style ###-##-####</option>
+          </select>
+        </div>
         <div class="field">
           <label>Custom pattern (advanced)</label>
-          <input type="text" id="regex-pattern" value="\b\d{6}[A-Za-z]\b">
+          <input type="text" id="regex-pattern" value="\b(?=[A-Za-z0-9]{0,5}\d)[A-Za-z0-9]{6}[A-Za-z]\b">
         </div>
-        <button class="btn accent full" id="btn-run-search">Scan document</button>
+        <button class="btn accent full" id="btn-run-search">Scan for pattern</button>
+        <div id="search-status" class="search-status-line">Idle.</div>
+
         <div class="divider"></div>
-        <div id="search-status">Idle.</div>
+
+        <div class="panel-section-head" style="padding:0 0 6px;"><h3>Literal text <span class="badge" style="background:rgba(236,72,153,0.16);color:#ec4899;">pink</span></h3></div>
+        <div class="note">Finds the exact word or phrase you type — no pattern syntax needed. Click a highlight on the page to <strong>copy</strong> it.</div>
+        <div class="field">
+          <label>Text to find</label>
+          <input type="text" id="literal-search-input" placeholder="e.g. Invoice Total">
+        </div>
+        <button class="btn full" id="btn-run-literal-search">Find text</button>
+        <div id="literal-search-status" class="search-status-line">Idle.</div>
+
+        <div class="divider"></div>
+
+        <div class="panel-section-head" style="padding:0 0 6px;"><h3>Signature <span class="badge">blue</span></h3></div>
+        <div class="note">Finds the word "Signature" anywhere in the document. Highlight only — no click action, just a quick way to see how many signature fields exist and where.</div>
+        <button class="btn full" id="btn-run-sig-search">Find signatures</button>
+        <div id="sig-search-status" class="search-status-line">Idle.</div>
+
+        <div class="divider"></div>
+
+        <div class="panel-section-head" style="padding:0 0 6px;"><h3>Fillable blanks <span class="badge" style="background:rgba(62,207,142,0.16);color:var(--ok);">green</span></h3></div>
+        <div class="note">Finds blank fill‑in lines made of underscores (e.g. <code>__________</code>). Click a highlight on the page to drop an editable text box right on top of it — then type, drag, or double‑click to edit it later.</div>
+        <button class="btn full" id="btn-run-blank-search">Find blank lines</button>
+        <div id="blank-search-status" class="search-status-line">Idle.</div>
+
       </div>
     </div>
   </div>
@@ -809,11 +972,72 @@ input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;}
 
 <div id="toast-stack"></div>
 
+<!-- ============ HELP / SHORTCUTS REFERENCE (floating, non-blocking) ============ -->
+<div id="help-panel">
+  <div class="hp-head">
+    <h3>Functions &amp; shortcuts</h3>
+    <button class="icon-btn" id="help-panel-close">✕</button>
+  </div>
+  <div class="hp-body">
+
+    <div class="hp-section">
+      <h4>File</h4>
+      <div class="hp-row"><span class="hp-desc">Open PDFs, PNGs/JPGs, .docx, or .xlsx — all convert to PDF automatically</span><span class="hp-key">Ctrl+O</span></div>
+      <div class="hp-row"><span class="hp-desc">Word/Excel conversion preserves text, formatting, and tables, paginated sensibly — it's not a pixel-perfect copy of Word/Excel's own printing (no headers/footers, exact fonts, or charts)</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc">Export the current document with annotations baked in</span><span class="hp-key">Ctrl+S</span></div>
+    </div>
+
+    <div class="hp-section">
+      <h4>Annotate</h4>
+      <div class="hp-row"><span class="hp-desc"><b>Move / resize a shape</b> — click directly on an existing pen / line / arrow / rectangle / circle / highlight / whiteout shape (any tool selected) to activate it. Drag its body to move it, or drag one of its square handles to resize/reshape it (pen strokes can only be moved, not resized — no natural corners to grab)</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc"><b>Pen / Line / Arrow / Rectangle / Circle / Highlight</b> — pick a tool, then drag on the page to draw</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc"><b>Text</b> — click the page to drop an editable box and type right away; click elsewhere to finish; <b>double‑click</b> a box later to edit it again; drag it to reposition. Click (don't drag) a box once to select it — a small handle appears at its corner, drag it up/down to resize the text, or use Color / Size / Bold / Italic in this panel</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc"><b>Whiteout</b> — covers content with a white block (overlay only, original page is untouched)</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc"><b>Eraser</b> — click any shape (or a text box) to remove it</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc">Undo / Redo</span><span class="hp-key">Ctrl+Z / Ctrl+Y</span></div>
+      <div class="hp-row"><span class="hp-desc">Delete the selected text box or shape, or clear the whole page if nothing is selected</span><span class="hp-key">Delete</span></div>
+    </div>
+
+    <div class="hp-section">
+      <h4>Screenshot (single document)</h4>
+      <div class="hp-row"><span class="hp-desc">Drag a region on the page to open the floating toolbar</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc">Copy the selected region as an image</span><span class="hp-key">Ctrl+C</span></div>
+      <div class="hp-row"><span class="hp-desc">OCR the selected region and copy the text</span><span class="hp-key">Ctrl+Shift+C</span></div>
+      <div class="hp-row"><span class="hp-desc">Toolbar icons: download PNG, highlight, arrow, text, mosaic, whiteout, OCR this region</span><span class="hp-key"></span></div>
+    </div>
+
+    <div class="hp-section">
+      <h4>OCR</h4>
+      <div class="hp-row"><span class="hp-desc"><b>Selected region</b> uses your last screenshot selection; <b>Full page</b> OCRs everything currently rendered</span><span class="hp-key"></span></div>
+    </div>
+
+    <div class="hp-section">
+      <h4>Search</h4>
+      <div class="hp-row"><span class="hp-desc"><b>Pattern</b> (amber) — default finds 6 letters/digits (≥1 digit) + 1 trailing letter, e.g. <b>1234b6T</b>. Use the preset dropdown for common patterns (names, emails, phone numbers, SSN-style) or type your own. Click an amber highlight to copy it</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc"><b>Literal text</b> (pink) — finds the exact word/phrase you type, no regex needed. Click a pink highlight to copy it</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc"><b>Signature</b> (blue) — finds the word "Signature"; highlight only, shows total count and pages</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc"><b>Fillable blanks</b> (green) — finds underscore lines like <b>______</b>; click a green highlight to drop a text box right on it, ready to type</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc">"Also OCR scanned pages" extends every search above to pages with no real text layer (scanned/photographed documents) — slower, off by default</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc">Click a result in the left sidebar to jump straight to that spot on the page</span><span class="hp-key"></span></div>
+    </div>
+
+    <div class="hp-section">
+      <h4>Pages</h4>
+      <div class="hp-row"><span class="hp-desc"><b>Rotate</b> 90° / 180° / 270° — current page, selected pages, or the whole document</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc"><b>Split</b> by comma‑separated ranges, e.g. <b>1-3,5,7-10</b> — each range downloads as its own PDF</span><span class="hp-key"></span></div>
+      <div class="hp-row"><span class="hp-desc"><b>Merge</b> combines every open document — PDFs, images, converted Word docs, and converted spreadsheets alike — into one PDF, in the order shown on the left</span><span class="hp-key"></span></div>
+    </div>
+
+  </div>
+</div>
+
 <!-- ============ LIBRARIES (CDN) ============ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
 /* =====================================================================
@@ -845,6 +1069,8 @@ const STATE = {
   toolOpacity: 1.0,
   toolStroke: 3,
   toolFontSize: 16,
+  toolBold: false,
+  toolItalic: false,
 
   lastOcrText: "",
   lastShotCanvas: null,
@@ -859,12 +1085,15 @@ let _pageDomCache = new Map(); // pageId -> {wrap, pdfCanvas, annotCanvas, highl
 /* ---------------------------------------------------------------------
    Doc / Page model
    --------------------------------------------------------------------- */
-function makeDoc(file, arrayBuffer) {
+function makeDoc(file, arrayBuffer, opts) {
+  opts = opts || {};
   return {
     id: "doc" + (_docIdSeq++),
     file,
-    name: file.name,
-    size: file.size,
+    name: opts.overrideName || file.name,
+    size: arrayBuffer.byteLength,
+    fromImage: !!opts.fromImage,         // true if this PDF was generated from a dropped image
+    officeKind: opts.officeKind || null, // "docx" | "xlsx" | null, if generated from a Word/Excel file
     originalBytes: arrayBuffer,          // never mutated
     workingBytes: arrayBuffer,           // mutated by rotate/structural ops
     pdfjsDoc: null,                       // pdfjsLib document (from workingBytes)
@@ -874,7 +1103,8 @@ function makeDoc(file, arrayBuffer) {
     undoStack: [],
     redoStack: [],
     textIndex: null,                      // cache of extracted text per page for regex search
-    matches: [],                           // last regex search results for this doc
+    ocrIndex: null,                       // cache of OCR'd text per page, for scanned/image-only pages
+    matches: [],                           // last search results for this doc
   };
 }
 function makePage(pageNum) {
@@ -976,19 +1206,241 @@ document.getElementById("center-panel").addEventListener("drop", e=>{
   if (e.dataTransfer.files && e.dataTransfer.files.length) handleIncomingFiles(e.dataTransfer.files);
 });
 
+function isPdfFile(f){ return f.type === "application/pdf" || /\.pdf$/i.test(f.name); }
+function isImageFile(f){ return /^image\/(png|jpe?g)$/i.test(f.type) || /\.(png|jpe?g)$/i.test(f.name); }
+function isDocxFile(f){ return /vnd\.openxmlformats-officedocument\.wordprocessingml\.document/i.test(f.type) || /\.docx$/i.test(f.name); }
+function isXlsxFile(f){ return /vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i.test(f.type) || /\.xlsx$/i.test(f.name); }
+
+// Wraps a dropped PNG/JPEG in a brand-new single-page PDF (one image, full bleed,
+// page sized to the image's native pixel dimensions) using pdf-lib — entirely
+// in-memory, no upload anywhere. This lets images flow through every existing
+// PDF feature (preview, rotate, annotate, merge, export) with zero special-casing.
+async function imageFileToPdfBytes(file){
+  const bytes = await file.arrayBuffer();
+  const pdfDoc = await PDFDocument.create();
+  const isPng = /png/i.test(file.type) || /\.png$/i.test(file.name);
+  const img = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
+  const { width, height } = img;
+  const page = pdfDoc.addPage([width, height]);
+  page.drawImage(img, { x: 0, y: 0, width, height });
+  return await pdfDoc.save();
+}
+
+/* ---------------------------------------------------------------------
+   WORD / EXCEL -> PDF CONVERSION
+   These convert dropped .docx/.xlsx files into ordinary multi-page PDFs
+   so they slot into the same document model as everything else (preview,
+   annotate, merge, export) — entirely in-browser, no upload anywhere.
+
+   Honest scope: this preserves CONTENT (headings, paragraphs, bold/italic,
+   lists, tables, embedded images for docx; cell values and sheet layout
+   for xlsx) and paginates it sensibly, but it is NOT a pixel-perfect
+   recreation of what Word/Excel themselves would print — fonts, exact
+   spacing, page breaks, headers/footers, formulas-as-formulas, charts,
+   and complex styling are not reproduced. It's built on Mammoth.js
+   (docx -> semantic HTML) and SheetJS (xlsx -> HTML tables), each then
+   rasterized page-by-page with html2canvas and embedded as PDF pages
+   via pdf-lib — the same image-embedding technique used for dropped
+   photos, just with browser-rendered HTML standing in for a photo.
+   --------------------------------------------------------------------- */
+const RENDER_SCALE = 2;                  // raster oversampling for crisp text; doesn't affect page point-size
+const DOCX_PAGE_PT = { w: 612, h: 792 };  // US Letter portrait, in PDF points (1pt = 1 offscreen CSS px here)
+const DOCX_MARGIN_PT = 54;                // 0.75in
+const XLSX_PAGE_PT = { w: 792, h: 612 };  // US Letter landscape — usually fits wide tables better
+const XLSX_MARGIN_PT = 36;                // 0.5in
+
+function createOffscreenContainer(width){
+  const el = document.createElement("div");
+  el.style.position = "fixed";
+  el.style.left = "-99999px";
+  el.style.top = "0";
+  el.style.width = width + "px";
+  el.style.background = "#ffffff";
+  document.body.appendChild(el);
+  return el;
+}
+
+// Lays out arbitrary block HTML (headings/paragraphs/lists/tables, as
+// produced by Mammoth) inside a hidden page-width container, measures each
+// top-level element, and buckets them into page-sized chunks — breaking
+// between elements, never through the middle of one. Each chunk is then
+// cloned into its own full page-sized div and rasterized with html2canvas.
+async function paginateBlocksToCanvases(innerHtml, pageW, pageH, margin){
+  const outer = createOffscreenContainer(pageW);
+  const measure = document.createElement("div");
+  measure.style.width = (pageW - margin*2) + "px";
+  measure.style.fontFamily = "Georgia,'Times New Roman',serif";
+  measure.style.fontSize = "13px";
+  measure.style.lineHeight = "1.5";
+  measure.style.color = "#1a1a1a";
+  measure.innerHTML = innerHtml && innerHtml.trim() ? innerHtml : "<p><em>(empty document)</em></p>";
+  measure.querySelectorAll("table").forEach(t=>{ t.style.borderCollapse="collapse"; t.style.width="100%"; t.style.margin="8px 0"; });
+  measure.querySelectorAll("td,th").forEach(c=>{ c.style.border="1px solid #999"; c.style.padding="3px 5px"; c.style.fontSize="11px"; });
+  measure.querySelectorAll("h1").forEach(h=>{ h.style.fontSize="20px"; h.style.margin="0 0 8px"; });
+  measure.querySelectorAll("h2").forEach(h=>{ h.style.fontSize="16px"; h.style.margin="12px 0 6px"; });
+  measure.querySelectorAll("h3,h4,h5,h6").forEach(h=>{ h.style.fontSize="14px"; h.style.margin="10px 0 5px"; });
+  measure.querySelectorAll("p").forEach(p=>{ p.style.margin="0 0 8px"; });
+  measure.querySelectorAll("ul,ol").forEach(l=>{ l.style.margin="0 0 8px"; l.style.paddingLeft="20px"; });
+  measure.querySelectorAll("img").forEach(im=>{ im.style.maxWidth="100%"; });
+  outer.appendChild(measure);
+
+  const contentH = pageH - margin*2;
+  const children = Array.from(measure.children);
+  const pages = [];
+  let current = [], currentH = 0;
+  children.forEach(child=>{
+    const h = child.offsetHeight + (parseFloat(getComputedStyle(child).marginBottom)||0);
+    if (current.length && (currentH + h) > contentH){ pages.push(current); current = []; currentH = 0; }
+    current.push(child);
+    currentH += h;
+  });
+  pages.push(current); // always at least one page, even if the document is empty
+
+  const out = [];
+  for (const nodes of pages){
+    const pageDiv = document.createElement("div");
+    pageDiv.style.width = pageW+"px"; pageDiv.style.height = pageH+"px";
+    pageDiv.style.background = "#fff"; pageDiv.style.boxSizing = "border-box";
+    pageDiv.style.padding = margin+"px"; pageDiv.style.overflow = "hidden";
+    pageDiv.style.fontFamily = measure.style.fontFamily;
+    pageDiv.style.fontSize = measure.style.fontSize;
+    pageDiv.style.lineHeight = measure.style.lineHeight;
+    pageDiv.style.color = measure.style.color;
+    nodes.forEach(n => pageDiv.appendChild(n.cloneNode(true)));
+    outer.appendChild(pageDiv);
+    const canvas = await html2canvas(pageDiv, { backgroundColor: "#ffffff", scale: RENDER_SCALE });
+    out.push({ canvas, ptW: pageW, ptH: pageH });
+    pageDiv.remove();
+  }
+  outer.remove();
+  return out;
+}
+
+// Same idea as paginateBlocksToCanvases but specifically for a single big
+// <table> (as produced by SheetJS): paginates by ROW so a row is never cut
+// in half, and repeats the header row (assumed to be row 1) at the top of
+// every page after the first so a long sheet stays legible.
+async function paginateTableToCanvases(tableHtml, pageW, pageH, margin, sheetTitle){
+  const outer = createOffscreenContainer(pageW);
+  const wrap = document.createElement("div");
+  wrap.style.width = (pageW - margin*2) + "px";
+  wrap.style.fontFamily = "Arial,Helvetica,sans-serif";
+  wrap.style.color = "#1a1a1a";
+  wrap.innerHTML = tableHtml;
+  const table = wrap.querySelector("table");
+  outer.appendChild(wrap);
+  if (!table){ outer.remove(); return []; }
+  table.style.borderCollapse = "collapse";
+  table.style.width = "100%";
+  table.querySelectorAll("td,th").forEach(c=>{ c.style.border="1px solid #999"; c.style.padding="3px 6px"; c.style.fontSize="11px"; c.style.whiteSpace="nowrap"; });
+
+  const rows = Array.from(table.rows);
+  const headerRow = rows[0] || null;
+  const headerH = headerRow ? headerRow.offsetHeight : 0;
+  const titleH = sheetTitle ? 26 : 0;
+  const contentH = pageH - margin*2;
+
+  const rowChunks = [];
+  let current = [], currentH = headerH + titleH;
+  for (let i=1;i<rows.length;i++){
+    const rh = rows[i].offsetHeight;
+    if (current.length && (currentH + rh) > contentH){ rowChunks.push(current); current = []; currentH = headerH + titleH; }
+    current.push(rows[i]);
+    currentH += rh;
+  }
+  if (current.length || !rowChunks.length) rowChunks.push(current);
+
+  const out = [];
+  for (let pi=0; pi<rowChunks.length; pi++){
+    const pageDiv = document.createElement("div");
+    pageDiv.style.width = pageW+"px"; pageDiv.style.height = pageH+"px";
+    pageDiv.style.background = "#fff"; pageDiv.style.boxSizing = "border-box";
+    pageDiv.style.padding = margin+"px"; pageDiv.style.overflow = "hidden";
+    pageDiv.style.fontFamily = wrap.style.fontFamily;
+    pageDiv.style.color = wrap.style.color;
+
+    if (sheetTitle){
+      const h = document.createElement("div");
+      h.textContent = sheetTitle + (rowChunks.length>1 ? ` (page ${pi+1} of ${rowChunks.length})` : "");
+      h.style.fontSize = "15px"; h.style.fontWeight = "700"; h.style.marginBottom = "10px";
+      pageDiv.appendChild(h);
+    }
+    const newTable = document.createElement("table");
+    newTable.style.borderCollapse = "collapse"; newTable.style.width = "100%";
+    if (headerRow) newTable.appendChild(headerRow.cloneNode(true));
+    rowChunks[pi].forEach(r => newTable.appendChild(r.cloneNode(true)));
+    newTable.querySelectorAll("td,th").forEach(c=>{ c.style.border="1px solid #999"; c.style.padding="3px 6px"; c.style.fontSize="11px"; });
+    pageDiv.appendChild(newTable);
+
+    outer.appendChild(pageDiv);
+    const canvas = await html2canvas(pageDiv, { backgroundColor: "#ffffff", scale: RENDER_SCALE });
+    out.push({ canvas, ptW: pageW, ptH: pageH });
+    pageDiv.remove();
+  }
+  outer.remove();
+  return out;
+}
+
+async function canvasesToPdfBytes(pages){
+  const pdfDoc = await PDFDocument.create();
+  for (const { canvas, ptW, ptH } of pages){
+    const png = canvas.toDataURL("image/png");
+    const img = await pdfDoc.embedPng(png);
+    const page = pdfDoc.addPage([ptW, ptH]);
+    page.drawImage(img, { x: 0, y: 0, width: ptW, height: ptH });
+  }
+  return await pdfDoc.save();
+}
+
+async function docxFileToPdfBytes(file){
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await mammoth.convertToHtml({ arrayBuffer });
+  const pages = await paginateBlocksToCanvases(result.value, DOCX_PAGE_PT.w, DOCX_PAGE_PT.h, DOCX_MARGIN_PT);
+  return await canvasesToPdfBytes(pages);
+}
+
+async function xlsxFileToPdfBytes(file){
+  const arrayBuffer = await file.arrayBuffer();
+  const wb = XLSX.read(arrayBuffer, { type: "array" });
+  let pages = [];
+  for (const name of wb.SheetNames){
+    const html = XLSX.utils.sheet_to_html(wb.Sheets[name], { header: "", footer: "" });
+    pages = pages.concat(await paginateTableToCanvases(html, XLSX_PAGE_PT.w, XLSX_PAGE_PT.h, XLSX_MARGIN_PT, name));
+  }
+  if (!pages.length){
+    pages = await paginateTableToCanvases("<table><tr><td>(empty workbook)</td></tr></table>", XLSX_PAGE_PT.w, XLSX_PAGE_PT.h, XLSX_MARGIN_PT, null);
+  }
+  return await canvasesToPdfBytes(pages);
+}
+
 async function handleIncomingFiles(fileList){
-  const files = Array.from(fileList).filter(f => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
-  if (!files.length){ toast("Please drop valid PDF files.", "err"); return; }
+  const files = Array.from(fileList).filter(f => isPdfFile(f) || isImageFile(f) || isDocxFile(f) || isXlsxFile(f));
+  if (!files.length){ toast("Please drop a PDF, PNG/JPG, .docx, or .xlsx file.", "err"); return; }
   for (const file of files){
     try{
-      const buf = await file.arrayBuffer();
-      const doc = makeDoc(file, buf);
+      let bytes, opts;
+      if (isImageFile(file)){
+        bytes = await imageFileToPdfBytes(file);
+        opts = { overrideName: file.name.replace(/\.(png|jpe?g)$/i, "") + ".pdf", fromImage: true };
+      } else if (isDocxFile(file)){
+        toast(`Converting ${file.name}…`);
+        bytes = await docxFileToPdfBytes(file);
+        opts = { overrideName: file.name.replace(/\.docx$/i, "") + ".pdf", officeKind: "docx" };
+      } else if (isXlsxFile(file)){
+        toast(`Converting ${file.name}…`);
+        bytes = await xlsxFileToPdfBytes(file);
+        opts = { overrideName: file.name.replace(/\.xlsx$/i, "") + ".pdf", officeKind: "xlsx" };
+      } else {
+        bytes = await file.arrayBuffer();
+        opts = {};
+      }
+      const doc = makeDoc(file, bytes, opts);
       await loadDocPdfJs(doc);
       STATE.docs.push(doc);
       if (!STATE.activeDocId) setActiveDoc(doc.id);
     }catch(err){
       console.error(err);
-      toast(`Failed to load ${file.name}`, "err");
+      toast(`Failed to load ${file.name}: ${err.message}`, "err");
     }
   }
   recomputeMode();
@@ -1022,6 +1474,7 @@ async function reloadDocPdfJsPreserveAnnotations(doc){
   }
   doc.rotationOverride = await captureIntrinsicRotations(pdf);
   doc.textIndex = null; // text positions may shift with rotation; force re-extraction on next search
+  doc.ocrIndex = null;  // OCR was performed against the previous orientation; force re-OCR on next search
 }
 
 // Reads each page's real /Rotate value from the (already-loaded) pdf.js document.
@@ -1090,7 +1543,7 @@ function renderFileList(){
     el.dataset.docId = doc.id;
     el.innerHTML = `
       <span class="fi-drag" title="Drag to reorder">⠿</span>
-      <span class="fi-icon">PDF</span>
+      <span class="fi-icon">${doc.fromImage ? "IMG" : doc.officeKind === "docx" ? "DOCX" : doc.officeKind === "xlsx" ? "XLSX" : "PDF"}</span>
       <span class="fi-meta">
         <div class="fi-name" title="${escapeHtml(doc.name)}">${escapeHtml(doc.name)}</div>
         <div class="fi-sub">${doc.numPages} pages · ${formatBytes(doc.size)}</div>
@@ -1280,10 +1733,12 @@ async function buildPageDom(doc, pageNum, wrap){
   pageObj.viewport = { width: viewport.width, height: viewport.height, scale, rotation: rot };
   pageObj.rendered = true;
 
-  _pageDomCache.set(doc.id+"_"+pageNum, { wrap, pdfCanvas, annotCanvas, highlightCanvas });
+  _pageDomCache.set(doc.id+"_"+pageNum, { wrap, pdfCanvas, annotCanvas, highlightCanvas, textBoxes: new Map() });
 
   redrawAnnotations(doc, pageNum);
   redrawHighlights(doc, pageNum);
+  renderMatchHitTargetsForPage(doc, pageNum);
+  renderTextBoxes(doc, pageNum);
   attachAnnotationHandlers(doc, pageNum, annotCanvas, wrap);
 }
 
@@ -1361,6 +1816,8 @@ function getToolSettings(){
     opacity: STATE.toolOpacity,
     stroke: STATE.toolStroke,
     fontSize: STATE.toolFontSize,
+    bold: STATE.toolBold,
+    italic: STATE.toolItalic,
   };
 }
 
@@ -1384,7 +1841,11 @@ function doUndo(){
   const page = doc.pages[entry.pageNum-1];
   doc.redoStack.push({ pageNum: entry.pageNum, snapshot: JSON.parse(JSON.stringify(page.annotations)) });
   page.annotations = entry.snapshot;
+  _selectedShapeInfo = null; // the old reference may no longer match the restored array
   redrawAnnotations(doc, entry.pageNum);
+  renderTextBoxes(doc, entry.pageNum);
+  renderMatchHitTargetsForPage(doc, entry.pageNum);
+  clearTextSelection();
   refreshUndoRedoButtons();
 }
 function doRedo(){
@@ -1393,7 +1854,11 @@ function doRedo(){
   const page = doc.pages[entry.pageNum-1];
   doc.undoStack.push({ pageNum: entry.pageNum, snapshot: JSON.parse(JSON.stringify(page.annotations)) });
   page.annotations = entry.snapshot;
+  _selectedShapeInfo = null;
   redrawAnnotations(doc, entry.pageNum);
+  renderTextBoxes(doc, entry.pageNum);
+  renderMatchHitTargetsForPage(doc, entry.pageNum);
+  clearTextSelection();
   refreshUndoRedoButtons();
 }
 
@@ -1405,8 +1870,166 @@ function redrawAnnotations(doc, pageNum){
   ctx.clearRect(0,0,annotCanvas.width, annotCanvas.height);
   const page = doc.pages[pageNum-1];
   const scale = page.viewport ? page.viewport.scale : 1;
-  for (const a of page.annotations) drawAnnotation(ctx, a, scale);
+  // "text" annotations are rendered as live, editable/draggable DOM boxes (see
+  // renderTextBoxes) rather than being rasterized here, so they stay editable
+  // for as long as you're working. They're only rasterized at export time.
+  for (const a of page.annotations) if (a.type !== "text") drawAnnotation(ctx, a, scale);
+  drawSelectionIndicator(doc, pageNum);
 }
+
+/* ---------------------------------------------------------------------
+   MOVE existing shapes (pen, line, arrow, rect, circle, highlight,
+   whiteout). These all live as rasterized pixels on the shared
+   annotation canvas — unlike text boxes, which are separate DOM
+   elements. Clicking directly on top of one (with ANY drawing tool
+   selected) activates it instead of starting a new shape there: it's
+   shown with a dashed bounding box, and can then be dragged. Clicking
+   empty space, or starting a stroke elsewhere, deselects it.
+   --------------------------------------------------------------------- */
+let _selectedShapeInfo = null; // { doc, pageNum, annot, styleSnapshotted }
+
+function findTopAnnotationAt(page, pt){
+  // canvas-rasterized types only — "text" boxes handle their own hit-testing.
+  const candidates = page.annotations.filter(a=>a.type!=="text");
+  for (let i=candidates.length-1;i>=0;i--){ // topmost / most-recently-drawn first
+    if (annotationHitTest(candidates[i], pt)) return candidates[i];
+  }
+  return null;
+}
+function selectShape(doc, pageNum, annot){
+  clearShapeSelection();
+  clearTextSelection();
+  _selectedShapeInfo = { doc, pageNum, annot, styleSnapshotted:false };
+  syncAnnotControlsFromAnnotation(annot);
+  redrawAnnotations(doc, pageNum);
+}
+function clearShapeSelection(){
+  const prev = _selectedShapeInfo;
+  if (!prev) return;
+  _selectedShapeInfo = null;
+  redrawAnnotations(prev.doc, prev.pageNum);
+  syncAnnotControlsFromState();
+}
+function deleteSelectedShape(){
+  if (!_selectedShapeInfo) return;
+  const { doc, pageNum, annot } = _selectedShapeInfo;
+  const page = doc.pages[pageNum-1];
+  pushUndoSnapshot(doc, pageNum);
+  page.annotations = page.annotations.filter(a=>a.id!==annot.id);
+  _selectedShapeInfo = null;
+  redrawAnnotations(doc, pageNum);
+  syncAnnotControlsFromState();
+}
+function computeAnnotationBBox(annot){
+  const pts = annot.points || [];
+  if (!pts.length) return null;
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  pts.forEach(p=>{ minX=Math.min(minX,p.x); minY=Math.min(minY,p.y); maxX=Math.max(maxX,p.x); maxY=Math.max(maxY,p.y); });
+  return { x:minX, y:minY, w:Math.max(0,maxX-minX), h:Math.max(0,maxY-minY) };
+}
+// Returns the draggable resize/reshape handles for a shape, in unscaled
+// (points-space) coordinates:
+//  - line/arrow: one handle per literal endpoint (dragging it moves just
+//    that endpoint — preserves which end is the arrow tip).
+//  - rect/circle/highlight/whiteout: one handle per corner (resizes both
+//    dimensions, opposite corner fixed) PLUS one handle at the midpoint of
+//    each edge (resizes just that one dimension, everything else fixed) —
+//    8 handles total around the perimeter, so there's a generous grab area
+//    no matter which side you approach from.
+//  - pen: no handles (an arbitrary freehand path has no natural "corner";
+//    move the whole stroke instead, or erase and redraw it).
+function computeShapeHandles(annot){
+  const pts = annot.points || [];
+  if (pts.length < 2) return [];
+  if (annot.type === "line" || annot.type === "arrow"){
+    return [
+      { x: pts[0].x, y: pts[0].y, kind: "endpoint", which: 0 },
+      { x: pts[1].x, y: pts[1].y, kind: "endpoint", which: 1 },
+    ];
+  }
+  if (annot.type === "rect" || annot.type === "circle" || annot.type === "highlight" || annot.type === "whiteout"){
+    const minX = Math.min(pts[0].x, pts[1].x), maxX = Math.max(pts[0].x, pts[1].x);
+    const minY = Math.min(pts[0].y, pts[1].y), maxY = Math.max(pts[0].y, pts[1].y);
+    const midX = (minX+maxX)/2, midY = (minY+maxY)/2;
+    return [
+      { x: minX, y: minY, kind: "corner", opposite: { x: maxX, y: maxY } },
+      { x: maxX, y: minY, kind: "corner", opposite: { x: minX, y: maxY } },
+      { x: minX, y: maxY, kind: "corner", opposite: { x: maxX, y: minY } },
+      { x: maxX, y: maxY, kind: "corner", opposite: { x: minX, y: minY } },
+      { x: midX, y: minY, kind: "edge", axis: "y", controls: "min" }, // top edge
+      { x: midX, y: maxY, kind: "edge", axis: "y", controls: "max" }, // bottom edge
+      { x: minX, y: midY, kind: "edge", axis: "x", controls: "min" }, // left edge
+      { x: maxX, y: midY, kind: "edge", axis: "x", controls: "max" }, // right edge
+    ];
+  }
+  return [];
+}
+function findHandleAt(annot, pt, tol){
+  const handles = computeShapeHandles(annot);
+  let best = null, bestDist = Infinity;
+  for (const h of handles){
+    const d = Math.hypot(pt.x-h.x, pt.y-h.y);
+    if (d <= tol && d < bestDist){ best = h; bestDist = d; }
+  }
+  return best;
+}
+// Applies a drag of `handle` (for the given shape) to a new pointer position,
+// mutating annot.points directly so the shape redraws at its new size/shape.
+function applyHandleDrag(annot, handle, pt){
+  if (handle.kind === "endpoint"){
+    annot.points[handle.which] = { x: pt.x, y: pt.y };
+    return;
+  }
+  if (handle.kind === "corner"){
+    annot.points[0] = { x: pt.x, y: pt.y };
+    annot.points[1] = { x: handle.opposite.x, y: handle.opposite.y };
+    return;
+  }
+  if (handle.kind === "edge"){
+    // Recompute the current bbox fresh each call, adjust only the one bound
+    // this handle controls, and leave the other three exactly as they are.
+    const pts = annot.points;
+    let minX = Math.min(pts[0].x, pts[1].x), maxX = Math.max(pts[0].x, pts[1].x);
+    let minY = Math.min(pts[0].y, pts[1].y), maxY = Math.max(pts[0].y, pts[1].y);
+    if (handle.axis === "y"){ if (handle.controls === "min") minY = pt.y; else maxY = pt.y; }
+    else { if (handle.controls === "min") minX = pt.x; else maxX = pt.x; }
+    annot.points[0] = { x: minX, y: minY };
+    annot.points[1] = { x: maxX, y: maxY };
+  }
+}
+function drawSelectionIndicator(doc, pageNum){
+  if (!_selectedShapeInfo || _selectedShapeInfo.doc !== doc || _selectedShapeInfo.pageNum !== pageNum) return;
+  const cache = _pageDomCache.get(doc.id+"_"+pageNum);
+  if (!cache) return;
+  const page = doc.pages[pageNum-1];
+  const scale = page.viewport ? page.viewport.scale : 1;
+  const annot = _selectedShapeInfo.annot;
+  const bbox = computeAnnotationBBox(annot);
+  if (!bbox) return;
+  const ctx = cache.annotCanvas.getContext("2d");
+  const pad = 6 + (annot.stroke||3)/2;
+  ctx.save();
+  ctx.setLineDash([5,4]);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = "rgba(79,140,255,0.95)";
+  ctx.strokeRect((bbox.x*scale)-pad, (bbox.y*scale)-pad, (bbox.w*scale)+pad*2, (bbox.h*scale)+pad*2);
+  ctx.restore();
+
+  // draggable handles — drag one to resize/reshape instead of just moving
+  const handles = computeShapeHandles(annot);
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.lineWidth = 1.5;
+  handles.forEach(h=>{
+    const hx = h.x*scale, hy = h.y*scale;
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "rgba(79,140,255,0.95)";
+    ctx.fillRect(hx-5, hy-5, 10, 10);
+    ctx.strokeRect(hx-5, hy-5, 10, 10);
+  });
+  ctx.restore();
+}
+
 
 function drawAnnotation(ctx, a, scale){
   ctx.save();
@@ -1469,9 +2092,13 @@ function drawAnnotation(ctx, a, scale){
     }
     case "text": {
       if (!pts.length) break;
-      ctx.font = `${a.fontSize*scale}px ${getComputedStyle(document.body).fontFamily}`;
+      const weight = a.bold ? "700" : "400";
+      const fstyle = a.italic ? "italic" : "normal";
+      const px = a.fontSize*scale;
+      ctx.font = `${fstyle} ${weight} ${px}px ${getComputedStyle(document.body).fontFamily}`;
       ctx.textBaseline = "top";
-      ctx.fillText(a.text || "", pts[0].x, pts[0].y);
+      const lineHeight = px * 1.25; // matches .text-annot-box's CSS line-height for visual parity
+      (a.text || "").split("\n").forEach((line, i)=> ctx.fillText(line, pts[0].x, pts[0].y + i*lineHeight));
       break;
     }
   }
@@ -1494,6 +2121,8 @@ function attachAnnotationHandlers(doc, pageNum, annotCanvas, wrap){
   let drawing = false;
   let currentAnnot = null;
   let penPoints = [];
+  let shapeDrag = null;   // { annot, startPoints, startPt, moved }
+  let shapeResize = null; // { annot, handle, moved }
 
   function toUnscaled(evt){
     const rect = annotCanvas.getBoundingClientRect();
@@ -1507,20 +2136,51 @@ function attachAnnotationHandlers(doc, pageNum, annotCanvas, wrap){
     if (STATE.shotMode) return; // screenshot tool takes priority, handled elsewhere
     if (e.button !== 0) return;
     const tool = STATE.tool;
+
     if (tool === "eraser"){
       eraseAt(doc, pageNum, toUnscaled(e));
       return;
     }
-    drawing = true;
-    annotCanvas.setPointerCapture(e.pointerId);
-    const settings = getToolSettings();
+
     const p0 = toUnscaled(e);
 
     if (tool === "text"){
-      drawing = false;
-      promptTextAnnotation(doc, pageNum, p0, settings);
+      createTextAnnotationAt(doc, pageNum, p0, getToolSettings());
       return;
     }
+
+    // If the currently-selected shape is on this page, a click on one of its
+    // resize handles takes priority over everything else below.
+    if (_selectedShapeInfo && _selectedShapeInfo.doc === doc && _selectedShapeInfo.pageNum === pageNum){
+      const scale = doc.pages[pageNum-1].viewport.scale;
+      const handle = findHandleAt(_selectedShapeInfo.annot, p0, 18/scale);
+      if (handle){
+        pushUndoSnapshot(doc, pageNum); // pre-resize state; discarded below if nothing actually moves
+        shapeResize = { annot: _selectedShapeInfo.annot, handle, moved:false };
+        annotCanvas.setPointerCapture(e.pointerId);
+        annotCanvas.style.cursor = "crosshair";
+        return;
+      }
+    }
+
+    // Clicking directly on top of an EXISTING shape activates it for
+    // dragging/restyling instead of starting a brand-new shape there —
+    // this works no matter which drawing tool is currently selected.
+    const page = doc.pages[pageNum-1];
+    const hit = findTopAnnotationAt(page, p0);
+    if (hit){
+      selectShape(doc, pageNum, hit);
+      pushUndoSnapshot(doc, pageNum); // pre-drag state; discarded below if nothing actually moves
+      shapeDrag = { annot: hit, startPoints: hit.points.map(p=>({x:p.x,y:p.y})), startPt: p0, moved:false };
+      annotCanvas.setPointerCapture(e.pointerId);
+      annotCanvas.style.cursor = "grabbing";
+      return;
+    }
+    clearShapeSelection(); // clicked empty space — drop any previous selection
+
+    drawing = true;
+    annotCanvas.setPointerCapture(e.pointerId);
+    const settings = getToolSettings();
 
     pushUndoSnapshot(doc, pageNum); // capture pre-stroke state so undo reverts cleanly
     currentAnnot = { id: uid(), type: tool, points: tool==="pen" ? [p0] : [p0,p0], ...settings };
@@ -1530,6 +2190,22 @@ function attachAnnotationHandlers(doc, pageNum, annotCanvas, wrap){
   });
 
   annotCanvas.addEventListener("pointermove", (e)=>{
+    if (shapeResize){
+      const pt = toUnscaled(e);
+      if (!shapeResize.moved && Math.hypot(pt.x-shapeResize.handle.x, pt.y-shapeResize.handle.y) > 1) shapeResize.moved = true;
+      applyHandleDrag(shapeResize.annot, shapeResize.handle, pt);
+      redrawAnnotations(doc, pageNum);
+      return;
+    }
+    if (shapeDrag){
+      const pt = toUnscaled(e);
+      const dx = pt.x - shapeDrag.startPt.x;
+      const dy = pt.y - shapeDrag.startPt.y;
+      if (Math.hypot(dx,dy) > 1) shapeDrag.moved = true;
+      shapeDrag.annot.points = shapeDrag.startPoints.map(p=>({ x: p.x+dx, y: p.y+dy }));
+      redrawAnnotations(doc, pageNum);
+      return;
+    }
     if (!drawing || !currentAnnot) return;
     const p = toUnscaled(e);
     if (currentAnnot.type === "pen"){
@@ -1558,17 +2234,44 @@ function attachAnnotationHandlers(doc, pageNum, annotCanvas, wrap){
     }
     currentAnnot = null;
   }
-  annotCanvas.addEventListener("pointerup", finishStroke);
-  annotCanvas.addEventListener("pointercancel", finishStroke);
-  annotCanvas.addEventListener("pointerleave", (e)=>{ if (e.buttons===0) finishStroke(); });
+  function finishShapeDrag(){
+    if (!shapeDrag) return;
+    annotCanvas.style.cursor = "";
+    if (!shapeDrag.moved){
+      doc.undoStack.pop(); // click without movement — discard the no-op snapshot
+      refreshUndoRedoButtons();
+    }
+    shapeDrag = null;
+  }
+  function finishShapeResize(){
+    if (!shapeResize) return;
+    annotCanvas.style.cursor = "";
+    if (!shapeResize.moved){
+      doc.undoStack.pop(); // click without movement — discard the no-op snapshot
+      refreshUndoRedoButtons();
+    }
+    shapeResize = null;
+  }
+  function finishInteraction(){
+    finishStroke();
+    finishShapeDrag();
+    finishShapeResize();
+  }
+  annotCanvas.addEventListener("pointerup", finishInteraction);
+  annotCanvas.addEventListener("pointercancel", finishInteraction);
+  annotCanvas.addEventListener("pointerleave", (e)=>{ if (e.buttons===0) finishInteraction(); });
 }
 
 function eraseAt(doc, pageNum, pt){
   const page = doc.pages[pageNum-1];
-  const willRemove = page.annotations.some(a=>annotationHitTest(a, pt));
+  // "text" annotations are handled separately: clicking the eraser directly on a
+  // live text box (see attachTextBoxInteractions) deletes it. Here we only hit-test
+  // the canvas-rasterized shape types.
+  const shapes = page.annotations.filter(a=>a.type !== "text");
+  const willRemove = shapes.some(a=>annotationHitTest(a, pt));
   if (!willRemove) return;
   pushUndoSnapshot(doc, pageNum); // pre-erase state
-  page.annotations = page.annotations.filter(a=>!annotationHitTest(a, pt));
+  page.annotations = page.annotations.filter(a=> a.type==="text" || !annotationHitTest(a, pt));
   redrawAnnotations(doc, pageNum);
 }
 function annotationHitTest(a, pt){
@@ -1602,28 +2305,338 @@ function distToSegment(p, a, b){
   return Math.hypot(p.x-cx,p.y-cy);
 }
 
-function promptTextAnnotation(doc, pageNum, pos, settings){
-  openModal("Add text annotation", `
-    <div class="field"><label>Text</label><textarea id="modal-text-input" autofocus></textarea></div>
-  `, [
-    {label:"Cancel", action:closeModal},
-    {label:"Add", primary:true, action:()=>{
-      const val = document.getElementById("modal-text-input").value;
-      closeModal();
-      if (!val) return;
-      pushUndoSnapshot(doc, pageNum);
-      doc.pages[pageNum-1].annotations.push({ id: uid(), type:"text", points:[pos], text: val, ...settings });
-      redrawAnnotations(doc, pageNum);
-    }}
-  ]);
-  setTimeout(()=>document.getElementById("modal-text-input")?.focus(), 50);
+/* ---------------------------------------------------------------------
+   EDITABLE / DRAGGABLE TEXT BOXES (live DOM overlay)
+   Text annotations are NOT drawn straight to the annotation canvas like
+   the other tools. Instead each one gets its own positioned, contentEditable
+   <div> on top of the page so it can be typed into directly, dragged around,
+   and re-opened for editing later with a double-click. They're only
+   rasterized onto the page when you export.
+   --------------------------------------------------------------------- */
+let _selectedTextAnnotId = null;
+let _selectedTextBoxInfo = null; // { doc, pageNum, box, annot }
+
+function clearTextSelection(){
+  const hadSelection = !!_selectedTextAnnotId;
+  document.querySelectorAll(".text-annot-box.selected").forEach(el=>{
+    el.classList.remove("selected");
+    if (el.resizeHandleEl) el.resizeHandleEl.style.display = "none";
+  });
+  _selectedTextAnnotId = null;
+  _selectedTextBoxInfo = null;
+  if (hadSelection) syncAnnotControlsFromState();
+}
+function selectTextBox(doc, pageNum, box, annot){
+  clearTextSelection();
+  clearShapeSelection();
+  box.classList.add("selected");
+  if (box.resizeHandleEl){ box.resizeHandleEl.style.display = "block"; positionTextResizeHandle(box); }
+  _selectedTextAnnotId = annot.id;
+  _selectedTextBoxInfo = { doc, pageNum, box, annot };
+  syncAnnotControlsFromAnnotation(annot);
+  switchToolPane("annotate"); // bring the relevant style controls into view
+}
+// Reflects an existing text box's own color/size/bold/italic into the Annotate
+// panel controls so they edit *that* box (rather than only setting defaults
+// for brand-new annotations).
+function syncAnnotControlsFromAnnotation(annot){
+  document.getElementById("annot-color").value = annot.color;
+  document.getElementById("annot-color-label").textContent = annot.color;
+  document.getElementById("annot-opacity").value = Math.round(annot.opacity*100);
+  document.getElementById("annot-opacity-label").textContent = Math.round(annot.opacity*100)+"%";
+  if (annot.type === "text"){
+    document.getElementById("annot-fontsize").value = annot.fontSize;
+    document.getElementById("annot-fontsize-label").textContent = annot.fontSize+"px";
+    document.getElementById("annot-bold").classList.toggle("active", !!annot.bold);
+    document.getElementById("annot-italic").classList.toggle("active", !!annot.italic);
+  } else if (typeof annot.stroke === "number"){
+    document.getElementById("annot-stroke").value = annot.stroke;
+    document.getElementById("annot-stroke-label").textContent = annot.stroke+"px";
+  }
+}
+// Restores the panel to reflect the default settings used for brand-new
+// annotations, once a box is deselected.
+function syncAnnotControlsFromState(){
+  document.getElementById("annot-color").value = STATE.toolColor;
+  document.getElementById("annot-color-label").textContent = STATE.toolColor;
+  document.getElementById("annot-opacity").value = Math.round(STATE.toolOpacity*100);
+  document.getElementById("annot-opacity-label").textContent = Math.round(STATE.toolOpacity*100)+"%";
+  document.getElementById("annot-stroke").value = STATE.toolStroke;
+  document.getElementById("annot-stroke-label").textContent = STATE.toolStroke+"px";
+  document.getElementById("annot-fontsize").value = STATE.toolFontSize;
+  document.getElementById("annot-fontsize-label").textContent = STATE.toolFontSize+"px";
+  document.getElementById("annot-bold").classList.toggle("active", STATE.toolBold);
+  document.getElementById("annot-italic").classList.toggle("active", STATE.toolItalic);
+}
+// If a text box is currently selected, applies a style patch live to it
+// (and records one undo step the first time it's touched per selection).
+// If a text box OR a shape is currently selected, applies a style patch live
+// to whichever one it is (only one of the two is ever selected at a time).
+function applyLiveStyleToSelection(patch){
+  if (_selectedTextBoxInfo){
+    const info = _selectedTextBoxInfo;
+    if (!info.styleSnapshotted){
+      pushUndoSnapshot(info.doc, info.pageNum); // one undo step per selection session, not per slider tick
+      info.styleSnapshotted = true;
+    }
+    Object.assign(info.annot, patch);
+    updateTextBoxStyle(info.doc, info.pageNum, info.box, info.annot);
+    return;
+  }
+  if (_selectedShapeInfo){
+    const info = _selectedShapeInfo;
+    if (!info.styleSnapshotted){
+      pushUndoSnapshot(info.doc, info.pageNum);
+      info.styleSnapshotted = true;
+    }
+    Object.assign(info.annot, patch);
+    redrawAnnotations(info.doc, info.pageNum);
+    return;
+  }
+}
+// Clicking anywhere on the page that ISN'T a text box clears the selection
+// (the box's own pointerdown handler stops propagation, so this only fires
+// for clicks outside any box).
+pagesContainer.addEventListener("pointerdown", ()=> clearTextSelection());
+
+function placeCaretAtEnd(el){
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+// Creates a brand-new text annotation at `pos` (unscaled page coordinates)
+// and immediately opens it for typing — no modal, no separate window.
+function createTextAnnotationAt(doc, pageNum, pos, settings){
+  pushUndoSnapshot(doc, pageNum); // pre-creation state
+  const annot = { id: uid(), type: "text", points: [pos], text: "", ...settings };
+  doc.pages[pageNum-1].annotations.push(annot);
+  renderTextBoxes(doc, pageNum);
+  const cache = _pageDomCache.get(doc.id+"_"+pageNum);
+  const box = cache && cache.textBoxes.get(annot.id);
+  if (box){
+    box.contentEditable = "true";
+    box.classList.add("editing");
+    setTimeout(()=> box.focus(), 0); // see tabIndex note in createTextBoxElement
+  }
+}
+
+function updateTextBoxStyle(doc, pageNum, box, annot){
+  const page = doc.pages[pageNum-1];
+  const scale = page.viewport ? page.viewport.scale : 1;
+  const pos = annot.points[0];
+  box.style.left = (pos.x*scale) + "px";
+  box.style.top = (pos.y*scale) + "px";
+  box.style.color = annot.color;
+  box.style.opacity = annot.opacity;
+  box.style.fontSize = (annot.fontSize*scale) + "px";
+  box.style.fontWeight = annot.bold ? "700" : "400";
+  box.style.fontStyle = annot.italic ? "italic" : "normal";
+  positionTextResizeHandle(box);
+}
+// The handle is a sibling positioned at the box's current bottom-right
+// corner. Only meaningful once the box is actually attached (offsetWidth/
+// Height need real layout), so this is a safe no-op before that.
+function positionTextResizeHandle(box){
+  const handle = box.resizeHandleEl;
+  if (!handle || !box.isConnected) return;
+  handle.style.left = (box.offsetLeft + box.offsetWidth) + "px";
+  handle.style.top = (box.offsetTop + box.offsetHeight) + "px";
+}
+
+function createTextBoxElement(doc, pageNum, annot){
+  const box = document.createElement("div");
+  box.className = "text-annot-box";
+  box.dataset.annotId = annot.id;
+  box.contentEditable = "false";
+  box.tabIndex = -1; // focusable via .focus() (needed reliably), but not via Tab-key navigation
+  box.spellcheck = false;
+  box.textContent = annot.text || "";
+  updateTextBoxStyle(doc, pageNum, box, annot);
+  attachTextBoxInteractions(doc, pageNum, box, annot);
+
+  const handle = document.createElement("div");
+  handle.className = "text-resize-handle";
+  handle.title = "Drag to resize text";
+  box.resizeHandleEl = handle;
+  attachTextResizeHandle(doc, pageNum, box, annot, handle);
+
+  return box;
+}
+
+// Dragging this handle scales the text box's font size (vertical drag
+// distance only, for predictable behavior regardless of how wide the box's
+// current content happens to be). Lives as a sibling of the box rather than
+// a child of it, since renderTextBoxes sometimes overwrites the box's
+// textContent wholesale, which would otherwise wipe out a nested handle.
+function attachTextResizeHandle(doc, pageNum, box, annot, handle){
+  let dragging = false, moved = false, startFontSize = 0, startClientY = 0;
+
+  handle.addEventListener("pointerdown", (e)=>{
+    e.stopPropagation(); // don't let this reach the box's own select/drag handler
+    e.preventDefault();
+    dragging = true; moved = false;
+    startFontSize = annot.fontSize;
+    startClientY = e.clientY;
+    handle.setPointerCapture(e.pointerId);
+    pushUndoSnapshot(doc, pageNum); // pre-resize state; discarded below if nothing actually moves
+  });
+  handle.addEventListener("pointermove", (e)=>{
+    if (!dragging) return;
+    const page = doc.pages[pageNum-1];
+    const scale = page.viewport ? page.viewport.scale : 1;
+    const dy = (e.clientY - startClientY) / scale;
+    if (Math.abs(dy) > 1) moved = true;
+    const newSize = Math.round(clamp(startFontSize + dy*0.25, 8, 64));
+    if (newSize !== annot.fontSize){
+      annot.fontSize = newSize;
+      updateTextBoxStyle(doc, pageNum, box, annot);
+      if (_selectedTextBoxInfo && _selectedTextBoxInfo.annot === annot){
+        document.getElementById("annot-fontsize").value = newSize;
+        document.getElementById("annot-fontsize-label").textContent = newSize+"px";
+      }
+    }
+  });
+  function endResize(){
+    if (!dragging) return;
+    dragging = false;
+    if (!moved){ doc.undoStack.pop(); refreshUndoRedoButtons(); }
+  }
+  handle.addEventListener("pointerup", endResize);
+  handle.addEventListener("pointercancel", endResize);
+}
+
+function attachTextBoxInteractions(doc, pageNum, box, annot){
+  let dragging = false, moved = false, dragStartClient = null, startPagePos = null;
+
+  box.addEventListener("dblclick", (e)=>{
+    e.stopPropagation();
+    if (box.classList.contains("editing")) return;
+    pushUndoSnapshot(doc, pageNum); // pre-edit text, in case the edit is undone
+    box.contentEditable = "true";
+    box.classList.add("editing");
+    box.classList.remove("selected");
+    if (box.resizeHandleEl) box.resizeHandleEl.style.display = "none";
+    setTimeout(()=>{ box.focus(); placeCaretAtEnd(box); }, 0);
+  });
+
+  box.addEventListener("pointerdown", (e)=>{
+    if (box.classList.contains("editing")) return; // let native caret placement / text selection happen
+    e.stopPropagation();
+    if (STATE.tool === "eraser"){
+      deleteTextAnnotation(doc, pageNum, annot.id);
+      return;
+    }
+    selectTextBox(doc, pageNum, box, annot);
+    dragging = true; moved = false;
+    dragStartClient = { x: e.clientX, y: e.clientY };
+    startPagePos = { x: annot.points[0].x, y: annot.points[0].y };
+    box.classList.add("dragging");
+    box.setPointerCapture(e.pointerId);
+    pushUndoSnapshot(doc, pageNum); // pre-drag state; discarded below if nothing actually moves
+  });
+  box.addEventListener("pointermove", (e)=>{
+    if (!dragging) return;
+    const page = doc.pages[pageNum-1];
+    const scale = page.viewport ? page.viewport.scale : 1;
+    const dx = (e.clientX - dragStartClient.x) / scale;
+    const dy = (e.clientY - dragStartClient.y) / scale;
+    if (Math.hypot(dx,dy) > 1.5) moved = true;
+    annot.points[0] = { x: startPagePos.x + dx, y: startPagePos.y + dy };
+    updateTextBoxStyle(doc, pageNum, box, annot);
+  });
+  function endDrag(){
+    if (!dragging) return;
+    dragging = false;
+    box.classList.remove("dragging");
+    if (!moved){
+      doc.undoStack.pop(); // click without movement — discard the no-op snapshot
+      refreshUndoRedoButtons();
+    }
+  }
+  box.addEventListener("pointerup", endDrag);
+  box.addEventListener("pointercancel", endDrag);
+
+  box.addEventListener("blur", ()=> commitTextEdit(doc, pageNum, box, annot));
+  box.addEventListener("keydown", (e)=>{
+    if (e.key === "Escape"){ e.preventDefault(); box.blur(); }
+    e.stopPropagation(); // don't let app-level shortcuts (Ctrl+Z, Delete, ...) fire while typing
+  });
+}
+
+function commitTextEdit(doc, pageNum, box, annot){
+  if (!box.classList.contains("editing")) return;
+  box.contentEditable = "false";
+  box.classList.remove("editing");
+  const newText = box.textContent;
+  if (!newText.trim()){
+    // left empty — remove it (one undo step restores both the text and the box)
+    deleteTextAnnotation(doc, pageNum, annot.id);
+    return;
+  }
+  if (newText !== annot.text){
+    pushUndoSnapshot(doc, pageNum);
+    annot.text = newText;
+  }
+}
+
+function deleteTextAnnotation(doc, pageNum, annotId){
+  const page = doc.pages[pageNum-1];
+  if (!page.annotations.some(a=>a.id===annotId)) return;
+  pushUndoSnapshot(doc, pageNum);
+  page.annotations = page.annotations.filter(a=>a.id!==annotId);
+  if (_selectedTextAnnotId === annotId) clearTextSelection();
+  renderTextBoxes(doc, pageNum);
+  renderMatchHitTargetsForPage(doc, pageNum);
+}
+
+// Keeps each page's live DOM text boxes in sync with its annotations array:
+// creates boxes for new text annotations, updates position/style for existing
+// ones (e.g. after a zoom change), and removes boxes whose annotation is gone.
+function renderTextBoxes(doc, pageNum){
+  const cache = _pageDomCache.get(doc.id+"_"+pageNum);
+  if (!cache) return;
+  if (!cache.textBoxes) cache.textBoxes = new Map();
+  const page = doc.pages[pageNum-1];
+  const textAnnots = page.annotations.filter(a=>a.type==="text");
+  const liveIds = new Set(textAnnots.map(a=>a.id));
+
+  for (const [id, el] of cache.textBoxes){
+    if (!liveIds.has(id)){
+      if (el.resizeHandleEl) el.resizeHandleEl.remove();
+      el.remove();
+      cache.textBoxes.delete(id);
+    }
+  }
+  textAnnots.forEach(annot=>{
+    let box = cache.textBoxes.get(annot.id);
+    if (!box){
+      box = createTextBoxElement(doc, pageNum, annot);
+      cache.wrap.appendChild(box);
+      cache.wrap.appendChild(box.resizeHandleEl);
+      cache.textBoxes.set(annot.id, box);
+      positionTextResizeHandle(box); // box wasn't attached yet when first styled — position now
+    } else {
+      if (!box.classList.contains("editing") && box.textContent !== (annot.text||"")){
+        box.textContent = annot.text || "";
+      }
+      updateTextBoxStyle(doc, pageNum, box, annot);
+    }
+  });
 }
 
 function clearCurrentPageAnnotations(){
   const doc = getActiveDoc(); if (!doc) return;
   pushUndoSnapshot(doc, STATE.currentPageNum);
   doc.pages[STATE.currentPageNum-1].annotations = [];
+  _selectedShapeInfo = null;
   redrawAnnotations(doc, STATE.currentPageNum);
+  renderTextBoxes(doc, STATE.currentPageNum);
+  renderMatchHitTargetsForPage(doc, STATE.currentPageNum);
+  clearTextSelection();
 }
 
 /* ---- annotation toolbar wiring ---- */
@@ -1632,6 +2645,7 @@ document.querySelectorAll("#annot-tool-grid .tool-btn").forEach(btn=>{
     document.querySelectorAll("#annot-tool-grid .tool-btn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
     STATE.tool = btn.dataset.tool;
+    clearShapeSelection();
   });
 });
 document.querySelector('#annot-tool-grid .tool-btn[data-tool="pen"]').classList.add("active");
@@ -1639,18 +2653,32 @@ document.querySelector('#annot-tool-grid .tool-btn[data-tool="pen"]').classList.
 document.getElementById("annot-color").addEventListener("input", (e)=>{
   STATE.toolColor = e.target.value;
   document.getElementById("annot-color-label").textContent = e.target.value;
+  applyLiveStyleToSelection({ color: e.target.value });
 });
 document.getElementById("annot-opacity").addEventListener("input", (e)=>{
   STATE.toolOpacity = parseInt(e.target.value,10)/100;
   document.getElementById("annot-opacity-label").textContent = e.target.value+"%";
+  applyLiveStyleToSelection({ opacity: STATE.toolOpacity });
 });
 document.getElementById("annot-stroke").addEventListener("input", (e)=>{
   STATE.toolStroke = parseInt(e.target.value,10);
   document.getElementById("annot-stroke-label").textContent = e.target.value+"px";
+  applyLiveStyleToSelection({ stroke: STATE.toolStroke });
 });
 document.getElementById("annot-fontsize").addEventListener("input", (e)=>{
   STATE.toolFontSize = parseInt(e.target.value,10);
   document.getElementById("annot-fontsize-label").textContent = e.target.value+"px";
+  applyLiveStyleToSelection({ fontSize: STATE.toolFontSize });
+});
+document.getElementById("annot-bold").addEventListener("click", ()=>{
+  STATE.toolBold = !STATE.toolBold;
+  document.getElementById("annot-bold").classList.toggle("active", STATE.toolBold);
+  applyLiveStyleToSelection({ bold: STATE.toolBold });
+});
+document.getElementById("annot-italic").addEventListener("click", ()=>{
+  STATE.toolItalic = !STATE.toolItalic;
+  document.getElementById("annot-italic").classList.toggle("active", STATE.toolItalic);
+  applyLiveStyleToSelection({ italic: STATE.toolItalic });
 });
 document.getElementById("btn-clear-annots").addEventListener("click", clearCurrentPageAnnotations);
 ["btn-undo","btn-undo-2"].forEach(id=>document.getElementById(id).addEventListener("click", doUndo));
@@ -1794,7 +2822,7 @@ function applyShotTextToPage(sel){
   const { doc, pageNum, x, y } = sel;
   const page = doc.pages[pageNum-1];
   const scale = page.viewport.scale;
-  promptTextAnnotation(doc, pageNum, {x:x/scale, y:y/scale}, getToolSettings());
+  createTextAnnotationAt(doc, pageNum, {x:x/scale, y:y/scale}, getToolSettings());
 }
 
 function pixelateCanvas(canvas, blockSize){
@@ -1887,9 +2915,26 @@ document.getElementById("btn-ocr-download").addEventListener("click", ()=>{
 });
 
 /* ---------------------------------------------------------------------
-   REGEX SEARCH ENGINE
-   Default pattern: exactly 6 digits followed by 1 letter, letter always
-   last, case-insensitive: /\b\d{6}[A-Za-z]\b/gi
+   SEARCH ENGINE
+   Four independent match kinds can coexist on a document at once:
+     - "pattern"   : regex search (default: 6 letters/digits with at least
+                     one digit, plus 1 trailing letter — e.g. 1234b6T — or
+                     any custom
+                     pattern, including the dropdown presets). Highlighted
+                     in amber. Clicking a highlight on the page copies the
+                     matched text to the clipboard.
+     - "literal"   : the exact word/phrase typed, no regex syntax needed.
+                     Highlighted in pink. Click to copy, same as "pattern".
+     - "signature" : literal word "signature"/"signatures". Highlighted in
+                     blue. Highlight only — no click action.
+     - "blank"     : runs of 3+ underscores (form fill-in lines). Highlighted
+                     in green. Clicking a highlight drops an editable text
+                     box exactly on top of it, ready to type into.
+
+   Each search can optionally also OCR pages with little/no real text layer
+   (scanned documents, photographed forms) and search that recognized text
+   too — see the "Also OCR scanned pages" checkbox. Results are cached per
+   page (doc.ocrIndex) so a page is only ever OCR'd once.
 
    Implementation notes on highlighting:
    pdf.js text content items are laid out as discrete runs of glyphs,
@@ -1903,7 +2948,17 @@ document.getElementById("btn-ocr-download").addEventListener("click", ()=>{
    reasonable approximation: it always covers the match fully, though
    for matches spanning multiple items the drawn highlight may be very
    slightly wider than the exact glyphs (it snaps to whole text runs).
+   OCR'd text uses the same scheme, with Tesseract's word-level bounding
+   boxes standing in for pdf.js text items.
    --------------------------------------------------------------------- */
+
+const MATCH_STYLES = {
+  pattern:   { fill: "rgba(255, 214, 0, 0.45)",  stroke: "rgba(240, 169, 60, 0.9)",  dot: "var(--warn)"   },
+  literal:   { fill: "rgba(236, 72, 153, 0.32)", stroke: "rgba(236, 72, 153, 0.9)",  dot: "#ec4899"       },
+  signature: { fill: "rgba(79, 140, 255, 0.32)", stroke: "rgba(79, 140, 255, 0.9)",  dot: "var(--accent)" },
+  blank:     { fill: "rgba(62, 207, 142, 0.30)", stroke: "rgba(62, 207, 142, 0.85)", dot: "var(--ok)"     },
+};
+const DEFAULT_PATTERN = "\\b(?=[A-Za-z0-9]{0,5}\\d)[A-Za-z0-9]{6}[A-Za-z]\\b";
 
 async function buildPageTextIndex(doc, pageNum){
   const page = await doc.pdfjsDoc.getPage(pageNum);
@@ -1920,19 +2975,76 @@ async function buildPageTextIndex(doc, pageNum){
   });
   return { text, offsetMap, items: content.items, viewport };
 }
+function pageTextIsSparse(idx){
+  return !idx || idx.text.replace(/\s/g,"").length < 8;
+}
 
-async function runRegexSearch(){
-  const doc = getActiveDoc();
-  if (!doc){ toast("Open a document first.", "err"); return; }
-  const patternStr = document.getElementById("regex-pattern").value.trim() || "\\b\\d{6}[A-Za-z]\\b";
-  let regex;
-  try{ regex = new RegExp(patternStr, "gi"); }
-  catch(err){ toast("Invalid regex pattern.", "err"); return; }
+// OCRs one page (at 2x scale, for better accuracy than typical on-screen
+// rendering) and builds a {text, offsetMap} index from Tesseract's word-level
+// bounding boxes — the same shape buildPageTextIndex produces, so the exact
+// same scanning/highlighting code can consume either one.
+async function buildPageOcrIndex(doc, pageNum){
+  const page = await doc.pdfjsDoc.getPage(pageNum);
+  const rot = getDisplayRotation(doc, pageNum);
+  const OCR_SCALE = 2;
+  const viewport = page.getViewport({ scale: OCR_SCALE, rotation: rot });
+  const canvas = document.createElement("canvas");
+  canvas.width = viewport.width; canvas.height = viewport.height;
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+  const { data } = await Tesseract.recognize(canvas, "eng", { logger: () => {} });
+  const words = (data.words || []).map(w => ({
+    text: w.text, x: w.bbox.x0, y: w.bbox.y0, w: w.bbox.x1-w.bbox.x0, h: w.bbox.y1-w.bbox.y0,
+  }));
+  let text = ""; const offsetMap = [];
+  words.forEach((w, i)=>{
+    const start = text.length;
+    text += w.text;
+    for (let k=start;k<text.length;k++) offsetMap[k] = i;
+    text += " "; offsetMap[text.length-1] = -1;
+  });
+  return { words, text, offsetMap, ocrScale: OCR_SCALE };
+}
 
-  document.getElementById("search-status").textContent = `Scanning ${doc.numPages} page(s)…`;
-  doc.matches = [];
-  clearAllHighlights(doc);
+// Resolves a match's item index (into either pdf.js text items or OCR words,
+// depending on match.via) to a canvas-pixel rectangle at the page's current
+// render scale. This single function is what lets highlighting, clickable
+// hit-targets, and jump-to-match all work identically for native text and
+// OCR'd text without duplicating the coordinate math.
+function matchItemRect(doc, pageNum, match, itemIdx, scale){
+  if (match.via === "ocr"){
+    const ocrIdx = doc.ocrIndex && doc.ocrIndex[pageNum];
+    const w = ocrIdx && ocrIdx.words[itemIdx];
+    if (!w) return null;
+    const s = scale / ocrIdx.ocrScale;
+    return { x: w.x*s, y: w.y*s, w: w.w*s, h: w.h*s };
+  }
+  const idx = doc.textIndex && doc.textIndex[pageNum];
+  const item = idx && idx.items[itemIdx];
+  if (!item) return null;
+  return itemToCanvasRect(item, idx.viewport, scale);
+}
+function scanIndexInto(results, idx, re, pageNum, kind, via){
+  let m;
+  re.lastIndex = 0;
+  while ((m = re.exec(idx.text)) !== null){
+    const matchStart = m.index, matchEnd = m.index + m[0].length - 1;
+    const itemIdxs = new Set();
+    for (let i=matchStart;i<=matchEnd;i++){
+      const itIdx = idx.offsetMap[i];
+      if (itIdx !== undefined && itIdx !== -1) itemIdxs.add(itIdx);
+    }
+    results.push({ id: uid(), text: m[0], page: pageNum, itemIdxs: Array.from(itemIdxs), kind, via });
+    if (re.lastIndex === m.index) re.lastIndex++; // guard against zero-length loops
+  }
+}
 
+// Scans every page of `doc` for `regex` and returns match descriptors tagged
+// with `kind`. Reuses (and lazily builds) the per-page text index cache; if
+// `includeOcr` is set, pages with little/no native text are also OCR'd and
+// scanned (cached in doc.ocrIndex so repeat searches don't re-OCR).
+async function scanForMatches(doc, regex, kind, includeOcr, onOcrPage){
+  const re = new RegExp(regex.source, regex.flags.includes("g") ? regex.flags : regex.flags + "g");
+  const results = [];
   for (let p=1;p<=doc.numPages;p++){
     let idx = doc.textIndex && doc.textIndex[p];
     if (!idx){
@@ -1940,40 +3052,94 @@ async function runRegexSearch(){
       doc.textIndex = doc.textIndex || {};
       doc.textIndex[p] = idx;
     }
-    let m;
-    regex.lastIndex = 0;
-    while ((m = regex.exec(idx.text)) !== null){
-      const matchStart = m.index, matchEnd = m.index + m[0].length - 1;
-      const itemIdxs = new Set();
-      for (let i=matchStart;i<=matchEnd;i++){
-        const itIdx = idx.offsetMap[i];
-        if (itIdx !== undefined && itIdx !== -1) itemIdxs.add(itIdx);
+    scanIndexInto(results, idx, re, p, kind, "text");
+
+    if (includeOcr && pageTextIsSparse(idx)){
+      let ocrIdx = doc.ocrIndex && doc.ocrIndex[p];
+      if (!ocrIdx){
+        if (onOcrPage) onOcrPage(p);
+        try{ ocrIdx = await buildPageOcrIndex(doc, p); }
+        catch(err){ console.warn("OCR failed on page", p, err); ocrIdx = { words:[], text:"", offsetMap:[], ocrScale:2 }; }
+        doc.ocrIndex = doc.ocrIndex || {};
+        doc.ocrIndex[p] = ocrIdx;
       }
-      doc.matches.push({ text: m[0], page: p, itemIdxs: Array.from(itemIdxs) });
-      if (regex.lastIndex === m.index) regex.lastIndex++; // guard against zero-length loops
+      scanIndexInto(results, ocrIdx, re, p, kind, "ocr");
     }
   }
+  return results;
+}
+
+// Runs one named search, replacing any prior results of the same `kind` on
+// the active doc (results of other kinds are left untouched), then refreshes
+// the sidebar list, the in-document highlights, and the clickable hit targets.
+async function runNamedSearch(kind, regex, statusElId, scanningLabel){
+  const doc = getActiveDoc();
+  if (!doc){ toast("Open a document first.", "err"); return; }
+  const includeOcr = document.getElementById("search-include-ocr").checked;
+  const statusEl = document.getElementById(statusElId);
+  statusEl.textContent = scanningLabel || `Scanning ${doc.numPages} page(s)…`;
+  let results;
+  try{
+    results = await scanForMatches(doc, regex, kind, includeOcr, (p)=>{
+      statusEl.textContent = `OCR scanning page ${p} of ${doc.numPages} (scanned pages only)…`;
+    });
+  }
+  catch(err){ console.error(err); statusEl.textContent = "Search failed: " + err.message; return; }
+
+  doc.matches = (doc.matches||[]).filter(m=>m.kind!==kind).concat(results);
+  const pages = [...new Set(results.map(r=>r.page))].sort((a,b)=>a-b);
+  statusEl.textContent = results.length
+    ? `${results.length} match${results.length===1?"":"es"} found on page${pages.length===1?"":"s"} ${pages.join(", ")}.`
+    : "No matches found.";
 
   renderMatchList(doc);
-  document.getElementById("search-status").textContent =
-    doc.matches.length ? `${doc.matches.length} match(es) found across ${doc.numPages} page(s).` : "No matches found.";
-  // Draw highlights on any pages already rendered
-  const pagesToHighlight = new Set(doc.matches.map(m=>m.page));
-  pagesToHighlight.forEach(p=> redrawHighlights(doc, p));
+  for (let p=1;p<=doc.numPages;p++) redrawHighlights(doc, p);
+  renderMatchHitTargets(doc);
+}
+
+function runPatternSearch(){
+  const patternStr = document.getElementById("regex-pattern").value.trim() || DEFAULT_PATTERN;
+  let regex;
+  try{ regex = new RegExp(patternStr, "i"); }
+  catch(err){ toast("Invalid regex pattern.", "err"); return; }
+  runNamedSearch("pattern", regex, "search-status");
+}
+function escapeRegexLiteral(str){
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function runLiteralSearch(){
+  const raw = document.getElementById("literal-search-input").value;
+  if (!raw.trim()){ toast("Type something to search for.", "err"); return; }
+  const regex = new RegExp(escapeRegexLiteral(raw.trim()), "i");
+  runNamedSearch("literal", regex, "literal-search-status");
+}
+function runSignatureSearch(){
+  runNamedSearch("signature", /\bsignatures?\b/i, "sig-search-status");
+}
+function runBlankSearch(){
+  runNamedSearch("blank", /_{3,}/, "blank-search-status");
 }
 
 function renderMatchList(doc){
   const wrap = document.getElementById("match-list");
-  document.getElementById("match-count").textContent = doc.matches.length ? String(doc.matches.length) : "";
-  if (!doc.matches.length){
-    wrap.innerHTML = `<div class="section-hint">No matches yet. Run a scan from the Search tab.</div>`;
+  const matches = doc.matches || [];
+  document.getElementById("match-count").textContent = matches.length ? String(matches.length) : "";
+  if (!matches.length){
+    wrap.innerHTML = `<div class="section-hint">No matches yet. Run a search from the Search tab.</div>`;
     return;
   }
   wrap.innerHTML = "";
-  doc.matches.forEach((m, i)=>{
+  const sorted = [...matches].sort((a,b)=> a.page - b.page);
+  sorted.forEach(m=>{
+    const style = MATCH_STYLES[m.kind] || MATCH_STYLES.pattern;
     const el = document.createElement("div");
     el.className = "match-item";
-    el.innerHTML = `<div class="mi-code">${escapeHtml(m.text)}</div><div class="mi-page">Page ${m.page}</div>`;
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:${style.dot};flex:0 0 auto;"></span>
+        <span class="mi-code">${escapeHtml(m.text)}</span>
+      </div>
+      <div class="mi-page">Page ${m.page} · ${m.kind}${m.via==="ocr" ? " · OCR" : ""}</div>`;
     el.addEventListener("click", ()=> jumpToMatch(doc, m));
     wrap.appendChild(el);
   });
@@ -1987,12 +3153,10 @@ function jumpToMatch(doc, match){
   let attempts = 0;
   const tryFineScroll = ()=>{
     const cache = _pageDomCache.get(doc.id+"_"+match.page);
-    const idx = doc.textIndex && doc.textIndex[match.page];
     const page = doc.pages[match.page-1];
-    if (cache && idx && page.viewport && match.itemIdxs.length){
-      const item = idx.items[match.itemIdxs[0]];
-      if (item){
-        const rect = itemToCanvasRect(item, idx.viewport, page.viewport.scale);
+    if (cache && page.viewport && match.itemIdxs.length){
+      const rect = matchItemRect(doc, match.page, match, match.itemIdxs[0], page.viewport.scale);
+      if (rect){
         const wrapRect = cache.wrap.getBoundingClientRect();
         const scrollRect = viewportScroll.getBoundingClientRect();
         const targetTop = viewportScroll.scrollTop + (wrapRect.top - scrollRect.top) + rect.y - (scrollRect.height * 0.4);
@@ -2013,31 +3177,24 @@ function redrawHighlights(doc, pageNum){
   const { highlightCanvas } = cache;
   const ctx = highlightCanvas.getContext("2d");
   ctx.clearRect(0,0,highlightCanvas.width, highlightCanvas.height);
-  const idx = doc.textIndex && doc.textIndex[pageNum];
   const page = doc.pages[pageNum-1];
-  if (!idx || !page.viewport) return;
+  if (!page.viewport) return;
   const scale = page.viewport.scale;
   const matches = (doc.matches||[]).filter(m=>m.page===pageNum);
-  ctx.save();
-  ctx.fillStyle = "rgba(255, 214, 0, 0.45)";
-  ctx.strokeStyle = "rgba(240, 169, 60, 0.9)";
-  ctx.lineWidth = 1.2;
   matches.forEach(m=>{
+    const style = MATCH_STYLES[m.kind] || MATCH_STYLES.pattern;
+    ctx.save();
+    ctx.fillStyle = style.fill;
+    ctx.strokeStyle = style.stroke;
+    ctx.lineWidth = 1.2;
     m.itemIdxs.forEach(itIdx=>{
-      const item = idx.items[itIdx];
-      if (!item) return;
-      const rect = itemToCanvasRect(item, idx.viewport, scale);
+      const rect = matchItemRect(doc, pageNum, m, itIdx, scale);
+      if (!rect) return;
       ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
       ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
     });
+    ctx.restore();
   });
-  ctx.restore();
-}
-function clearAllHighlights(doc){
-  for (let p=1;p<=doc.numPages;p++){
-    const cache = _pageDomCache.get(doc.id+"_"+p);
-    if (cache) cache.highlightCanvas.getContext("2d").clearRect(0,0,cache.highlightCanvas.width,cache.highlightCanvas.height);
-  }
 }
 function itemToCanvasRect(item, nativeViewport, scale){
   // item.transform = [a,b,c,d,e,f] in PDF space; convert to viewport (scale=1) space then scale to canvas px.
@@ -2056,7 +3213,79 @@ function flashMatchHighlight(doc, match){
   setTimeout(()=> cache.wrap.style.outline = "", 900);
 }
 
-document.getElementById("btn-run-search").addEventListener("click", runRegexSearch);
+/* ---- clickable hit-targets layered over each highlighted match ----
+   "pattern" and "literal" matches copy their text to the clipboard on click.
+   "blank" matches drop an editable text box on click; once a text box exists
+   near a blank, its hit-target is skipped on the next render (checked
+   dynamically by position, not a flag, so undo/redo of the box correctly
+   brings the hit-target back or removes it again).
+   "signature" matches get no hit-target at all — highlight only. */
+function renderMatchHitTargets(doc){
+  for (let p=1;p<=doc.numPages;p++) renderMatchHitTargetsForPage(doc, p);
+}
+function renderMatchHitTargetsForPage(doc, p){
+  const cache = _pageDomCache.get(doc.id+"_"+p);
+  if (!cache) return;
+  (cache.matchHits||[]).forEach(el=>el.remove());
+  cache.matchHits = [];
+  const page = doc.pages[p-1];
+  if (!page.viewport) return;
+  const scale = page.viewport.scale;
+  const matches = (doc.matches||[]).filter(m=> m.page===p && m.kind!=="signature");
+  matches.forEach(m=>{
+    // A "blank" match that already has a text box sitting on it shouldn't keep
+    // an active hit-target underneath — checked dynamically (rather than via a
+    // flag) so it stays correct even if that box is later removed by undo/redo.
+    if (m.kind === "blank" && matchHasTextBoxOnIt(doc, p, m, scale)) return;
+    m.itemIdxs.forEach(itIdx=>{
+      const rect = matchItemRect(doc, p, m, itIdx, scale);
+      if (!rect) return;
+      const hit = document.createElement("div");
+      hit.className = "match-hit match-hit-" + m.kind;
+      hit.style.left = rect.x+"px"; hit.style.top = rect.y+"px";
+      hit.style.width = rect.w+"px"; hit.style.height = rect.h+"px";
+      hit.title = m.kind === "blank" ? "Click to add a text box here" : "Click to copy to clipboard";
+      hit.addEventListener("click", (e)=>{ e.stopPropagation(); handleMatchHitClick(doc, p, m); });
+      cache.wrap.appendChild(hit);
+      cache.matchHits.push(hit);
+    });
+  });
+}
+function matchHasTextBoxOnIt(doc, pageNum, match, scale){
+  if (!match.itemIdxs.length) return false;
+  const rect = matchItemRect(doc, pageNum, match, match.itemIdxs[0], scale);
+  if (!rect) return false;
+  const pos = { x: rect.x/scale, y: rect.y/scale };
+  const tol = 18;
+  const page = doc.pages[pageNum-1];
+  return page.annotations.some(a => a.type==="text" &&
+    Math.hypot(a.points[0].x-pos.x, a.points[0].y-pos.y) < tol);
+}
+
+function handleMatchHitClick(doc, pageNum, match){
+  if (match.kind === "pattern" || match.kind === "literal"){
+    copyTextToClipboard(match.text);
+    return;
+  }
+  if (match.kind === "blank"){
+    const page = doc.pages[pageNum-1];
+    if (!page.viewport || !match.itemIdxs.length) return;
+    const scale = page.viewport.scale;
+    const rect = matchItemRect(doc, pageNum, match, match.itemIdxs[0], scale);
+    if (!rect) return;
+    const pos = { x: rect.x/scale, y: rect.y/scale };
+    createTextAnnotationAt(doc, pageNum, pos, getToolSettings());
+    renderMatchHitTargetsForPage(doc, pageNum);
+  }
+}
+
+document.getElementById("btn-run-search").addEventListener("click", runPatternSearch);
+document.getElementById("btn-run-literal-search").addEventListener("click", runLiteralSearch);
+document.getElementById("btn-run-sig-search").addEventListener("click", runSignatureSearch);
+document.getElementById("btn-run-blank-search").addEventListener("click", runBlankSearch);
+document.getElementById("regex-preset").addEventListener("change", (e)=>{
+  if (e.target.value) document.getElementById("regex-pattern").value = e.target.value;
+});
 
 /* ---------------------------------------------------------------------
    SPLIT / ROTATE / MERGE  (pdf-lib structural operations)
@@ -2145,7 +3374,8 @@ document.getElementById("btn-do-split").addEventListener("click", async ()=>{
   if (!segments.length){ toast("Could not parse any valid page ranges.","err"); return; }
 
   try{
-    const srcBytes = doc.workingBytes;
+    toast("Preparing pages…");
+    const srcBytes = await bakeAnnotationsIntoPdf(doc);
     for (let i=0;i<segments.length;i++){
       const seg = segments[i];
       const src = await PDFDocument.load(srcBytes);
@@ -2166,9 +3396,11 @@ document.getElementById("btn-do-split").addEventListener("click", async ()=>{
 document.getElementById("btn-do-merge").addEventListener("click", async ()=>{
   if (STATE.docs.length < 2){ toast("Need at least 2 documents to merge.","err"); return; }
   try{
+    toast("Preparing documents…");
     const out = await PDFDocument.create();
     for (const doc of STATE.docs){
-      const src = await PDFDocument.load(doc.workingBytes);
+      const srcBytes = await bakeAnnotationsIntoPdf(doc);
+      const src = await PDFDocument.load(srcBytes);
       const copied = await out.copyPages(src, src.getPageIndices());
       copied.forEach(pg => out.addPage(pg));
     }
@@ -2183,14 +3415,20 @@ document.getElementById("btn-do-merge").addEventListener("click", async ()=>{
 
 /* ---------------------------------------------------------------------
    EXPORT ENGINE
-   "Export annotated PDF": rasterizes each page's annotation overlay
-   (vector strokes + whiteout + text) at high resolution and stamps it
-   onto the corresponding pdf-lib page as a transparent PNG layer, then
-   saves a brand-new PDF. The original page content underneath is left
-   completely untouched — only a new image layer is composited on top,
-   matching the "overlay only, never destructive" requirement.
+   Rasterizes each page's annotation overlay (vector strokes + whiteout +
+   text) at high resolution and stamps it onto the corresponding pdf-lib
+   page as a transparent PNG layer, then returns the resulting PDF bytes.
+   The original page content underneath is left completely untouched —
+   only a new image layer is composited on top, matching the "overlay
+   only, never destructive" requirement.
+
+   This is shared by THREE different download paths — the main Export
+   button, Split, and Merge — so annotations show up no matter which one
+   you use, not just the dedicated Export button. If a document has no
+   annotations on any page, this is equivalent to just returning its raw
+   bytes (each per-page check below simply finds nothing to draw).
    --------------------------------------------------------------------- */
-async function exportAnnotatedPdf(doc){
+async function bakeAnnotationsIntoPdf(doc){
   const pdfLibDoc = await PDFDocument.load(doc.workingBytes);
   const EXPORT_SCALE = 2; // render overlay at 2x for crisper output
 
@@ -2221,7 +3459,7 @@ document.getElementById("btn-export").addEventListener("click", async ()=>{
   if (!doc){ toast("No document to export.","err"); return; }
   try{
     toast("Exporting…");
-    const bytes = await exportAnnotatedPdf(doc);
+    const bytes = await bakeAnnotationsIntoPdf(doc);
     downloadBytes(bytes, doc.name.replace(/\.pdf$/i,"") + "_annotated.pdf", "application/pdf");
     toast("Exported annotated PDF.", "ok");
   }catch(err){
@@ -2251,6 +3489,16 @@ function openModal(title, bodyHtml, buttons){
 function closeModal(){ modalOverlay.classList.remove("visible"); }
 document.getElementById("modal-close").addEventListener("click", closeModal);
 modalOverlay.addEventListener("click", (e)=>{ if (e.target===modalOverlay) closeModal(); });
+
+/* ---------------------------------------------------------------------
+   HELP / SHORTCUTS PANEL (floating, non-blocking reference)
+   --------------------------------------------------------------------- */
+document.getElementById("btn-help").addEventListener("click", ()=>{
+  document.getElementById("help-panel").classList.toggle("visible");
+});
+document.getElementById("help-panel-close").addEventListener("click", ()=>{
+  document.getElementById("help-panel").classList.remove("visible");
+});
 
 /* ---------------------------------------------------------------------
    TOOL TABS (right panel)
@@ -2305,7 +3553,11 @@ window.addEventListener("keydown", (e)=>{
   else if (mod && !isTyping && (e.key==="z" || e.key==="Z")){ e.preventDefault(); doUndo(); }
   else if (mod && !isTyping && (e.key==="y" || e.key==="Y")){ e.preventDefault(); doRedo(); }
   else if (!isTyping && e.key === "Delete"){
-    if (STATE.shotSelection){ hideShotToolbar(); }
+    if (_selectedTextAnnotId && _selectedTextBoxInfo){
+      deleteTextAnnotation(_selectedTextBoxInfo.doc, _selectedTextBoxInfo.pageNum, _selectedTextAnnotId);
+    } else if (_selectedShapeInfo){
+      deleteSelectedShape();
+    } else if (STATE.shotSelection){ hideShotToolbar(); }
     else clearCurrentPageAnnotations();
   }
   else if (e.key === "Escape"){
